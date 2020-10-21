@@ -152,8 +152,8 @@ debian/mongodb
 .settings/
 
 # Idea CLion project artifacts
-.idea
-CMakeLists.txt
+.idea/
+/cmake-build-*/
 
 # XCode projects
 .xcworkspace
