@@ -40,5 +40,7 @@ import_scons_target(mongo install-mongo)
 import_scons_target(unittests install-unittests)
 import_scons_target(integration_tests install-integration-tests)
 
-# Workaround for code analysis.
-include_directories(src)
+# Add target for cleaning server data.
+add_custom_target(clean_data
+        rm -rf var/lib/mongodb/db*/* var/log/mongodb/*
+        WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
