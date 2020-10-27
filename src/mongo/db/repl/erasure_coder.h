@@ -11,7 +11,7 @@ using namespace mongo;
 template<typename T>
 class Matrix {
 public:
-    Matrix(int numRows, int numCols) : _numRows(numRows), _numCols(numCols), _data(numRows, numCols) {}
+    Matrix(int numRows, int numCols) : _data(numRows * numCols), _numRows(numRows), _numCols(numCols) {}
 
     [[nodiscard]] T *data() noexcept {
         return _data.data();
