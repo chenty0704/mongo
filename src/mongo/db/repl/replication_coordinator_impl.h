@@ -375,6 +375,8 @@ public:
                                             OnRemoteCmdScheduledFn onRemoteCmdScheduled,
                                             OnRemoteCmdCompleteFn onRemoteCmdComplete) override;
 
+    const ErasureCoder &getErasureCoder() const noexcept override;
+
     // ================== Test support API ===================
 
     /**
@@ -1629,6 +1631,9 @@ private:
 
     // The cached value of the 'counter' field in the server's TopologyVersion.
     AtomicWord<int64_t> _cachedTopologyVersionCounter;  // (S)
+
+    // The erasure coder for the replica set.
+    std::unique_ptr<ErasureCoder> _erasureCoder; // (R)
 };
 
 }  // namespace repl

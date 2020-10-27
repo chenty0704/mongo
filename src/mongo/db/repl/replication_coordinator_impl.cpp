@@ -2312,6 +2312,10 @@ BSONObj ReplicationCoordinatorImpl::runCmdOnPrimaryAndAwaitResponse(
     return cbkResponse.data;
 }
 
+const ErasureCoder &ReplicationCoordinatorImpl::getErasureCoder() const noexcept {
+    return *_erasureCoder;
+}
+
 void ReplicationCoordinatorImpl::_killConflictingOpsOnStepUpAndStepDown(
     AutoGetRstlForStepUpStepDown* arsc, ErrorCodes::Error reason) {
     const OperationContext* rstlOpCtx = arsc->getOpCtx();
@@ -4144,6 +4148,9 @@ ReplicationCoordinatorImpl::_setCurrentRSConfig(WithLock lk,
     const ReplSetConfig oldConfig = _rsConfig;
     _rsConfig = newConfig;
     _protVersion.store(_rsConfig.getProtocolVersion());
+
+    // Initialize the erasure coder.
+    _erasureCoder = std::make_unique<ErasureCoder>(_rsConfig.getNumSourceSplits(), _rsConfig.getNumTotalSplits());
 
     // Warn if using the in-memory (ephemeral) storage engine or running running --nojournal with
     // writeConcernMajorityJournalDefault=true.

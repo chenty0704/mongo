@@ -91,6 +91,8 @@ const std::string kHeartbeatTimeoutFieldName = "heartbeatTimeoutSecs";
 const std::string kCatchUpTimeoutFieldName = "catchUpTimeoutMillis";
 const std::string kReplicaSetIdFieldName = "replicaSetId";
 const std::string kCatchUpTakeoverDelayFieldName = "catchUpTakeoverDelayMillis";
+const std::string kNumSourceSplits = "numSourceSplits";
+const std::string kNumTotalSplits = "numTotalSplits";
 
 }  // namespace
 
@@ -422,6 +424,13 @@ Status ReplSetConfig::_parseSettingsSubdocument(const BSONObj& settings) {
         return status;
     }
     _replicaSetId = replicaSetId;
+
+    // Parse erasure coding settings.
+    long long value;
+    bsonExtractIntegerFieldWithDefault(settings, kNumSourceSplits, 1, &value);
+    _numSourceSplits = static_cast<int>(value);
+    bsonExtractIntegerFieldWithDefault(settings, kNumTotalSplits, 1, &value);
+    _numTotalSplits = static_cast<int>(value);
 
     return Status::OK();
 }
@@ -957,6 +966,9 @@ BSONObj ReplSetConfig::toBSON() const {
     if (_replicaSetId.isSet()) {
         settingsBuilder.append(kReplicaSetIdFieldName, _replicaSetId);
     }
+
+    settingsBuilder.appendIntOrLL(kNumSourceSplits, _numSourceSplits);
+    settingsBuilder.appendIntOrLL(kNumTotalSplits, _numTotalSplits);
 
     settingsBuilder.done();
     return configBuilder.obj();

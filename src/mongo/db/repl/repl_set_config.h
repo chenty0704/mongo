@@ -489,6 +489,14 @@ public:
      */
     bool containsArbiter() const;
 
+    [[nodiscard]] int getNumSourceSplits() const {
+        return _numSourceSplits;
+    }
+
+    [[nodiscard]] int getNumTotalSplits() const {
+        return _numTotalSplits;
+    }
+
 private:
     /**
      * Parses the "settings" subdocument of a replica set configuration.
@@ -544,6 +552,7 @@ private:
     bool _configServer = false;
     OID _replicaSetId;
     ConnectionString _connectionString;
+    int _numSourceSplits = 1, _numTotalSplits = 1;
 };
 
 
