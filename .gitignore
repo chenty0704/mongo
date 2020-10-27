@@ -152,7 +152,7 @@ debian/mongodb
 .settings/
 
 # Idea CLion project artifacts
-.idea/
+/.idea/
 /cmake-build-*/
 
 # XCode projects
@@ -189,3 +189,6 @@ python2-venv
 
 # Generated resmoke configuration file
 resmoke.ini
+
+# Powershell scripts
+/pwshscripts/
