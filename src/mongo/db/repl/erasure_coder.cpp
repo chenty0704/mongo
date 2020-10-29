@@ -2,6 +2,7 @@
 #include <isa-l.h>
 #include <set>
 
+#include "mongo/db/index/index_descriptor.h"
 #include "mongo/db/repl/erasure_coder.h"
 
 static constexpr auto splitsFieldName = "_splits";
@@ -101,9 +102,18 @@ BSONObj ErasureCoder::encodeDocument(OperationContext &opCtx,
     BSONObjBuilder documentBuilder;
     BufBuilder nonIndexedElements;
 
+    static const auto isFieldIndexed = [&](std::string_view name) {
+        for (auto it = indexCatalog.getIndexIterator(&opCtx, false); it->more();) {
+            const auto *const indexDescriptor = it->next()->descriptor();
+            if (indexDescriptor->indexName().find(name) != std::string::npos)
+                return true;
+        }
+        return false;
+    };
+
     // Indexed elements are appended to the document builder while non-indexed elements are appended to a buffer.
     for (const auto &element : document) {
-        if (indexCatalog.findIndexByName(&opCtx, element.fieldNameStringData()) != nullptr)
+        if (isFieldIndexed(element.fieldName()))
             documentBuilder << element;
         else
             nonIndexedElements.appendBuf(element.rawdata(), element.size());

@@ -9,7 +9,7 @@
 using namespace mongo;
 
 template<typename T>
-class Matrix {
+struct Matrix {
 public:
     Matrix(int numRows, int numCols) : _data(numRows * numCols), _numRows(numRows), _numCols(numCols) {}
 

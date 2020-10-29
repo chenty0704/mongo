@@ -608,6 +608,16 @@ WriteResult performInserts(OperationContext* opCtx,
             }
 
             BSONObj toInsert = fixedDoc.getValue().isEmpty() ? doc : std::move(fixedDoc.getValue());
+            if (!wholeOp.getNamespace().isOnInternalDb()) {
+                const auto *const replCoord = repl::ReplicationCoordinator::get(opCtx);
+                const auto *const collection = CollectionCatalog::get(opCtx).
+                        lookupCollectionByNamespace(opCtx, wholeOp.getNamespace());
+                const auto *const indexCatalog = collection->getIndexCatalog();
+                const auto &erasureCoder = replCoord->getErasureCoder();
+
+                toInsert = erasureCoder.encodeDocument(*opCtx, *indexCatalog, toInsert);
+            }
+
             batch.emplace_back(stmtId, toInsert);
             bytesInBatch += batch.back().doc.objsize();
             if (!isLastDoc && batch.size() < maxBatchSize && bytesInBatch < maxBatchBytes)
