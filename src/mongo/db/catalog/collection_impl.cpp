@@ -39,6 +39,7 @@
 #include "mongo/bson/ordering.h"
 #include "mongo/bson/simple_bsonelement_comparator.h"
 #include "mongo/bson/simple_bsonobj_comparator.h"
+#include "mongo/bson/mutable/algorithm.h"
 #include "mongo/db/background.h"
 #include "mongo/db/catalog/collection_catalog.h"
 #include "mongo/db/catalog/collection_options.h"
@@ -65,6 +66,7 @@
 #include "mongo/db/query/internal_plans.h"
 #include "mongo/db/repl/oplog.h"
 #include "mongo/db/repl/replication_coordinator.h"
+#include "mongo/db/repl/erasure_coder.h"
 #include "mongo/db/service_context.h"
 #include "mongo/db/storage/durable_catalog.h"
 #include "mongo/db/storage/key_string.h"
@@ -502,7 +504,23 @@ Status CollectionImpl::insertDocuments(OperationContext* opCtx,
 
     const SnapshotId sid = opCtx->recoveryUnit()->getSnapshotId();
 
-    status = _insertDocuments(opCtx, begin, end, opDebug);
+    // Only insert self split locally.
+    const auto *const replCoord = repl::ReplicationCoordinator::get(opCtx);
+    if (replCoord->getMemberState().primary() && !_ns.isOnInternalDb()) {
+        std::vector<InsertStatement> localInsertStatements(std::distance(begin, end));
+        std::transform(begin, end, localInsertStatements.begin(), [&](InsertStatement insertStatement) {
+            mutablebson::Document document(insertStatement.doc);
+            auto splits = mutablebson::findFirstChildNamed(document.root(), splitsFieldName);
+            const auto selfSplit = splits[replCoord->getSelfIndex()];
+            while (splits.countChildren() > 0)
+                splits.popBack();
+            splits.pushBack(selfSplit);
+            insertStatement.doc = document.getObject();
+            return insertStatement;
+        });
+        status = _insertDocuments(opCtx, localInsertStatements.cbegin(), localInsertStatements.cend(), opDebug);
+    } else status = _insertDocuments(opCtx, begin, end, opDebug);
+
     if (!status.isOK()) {
         return status;
     }
