@@ -8,6 +8,9 @@
 
 using namespace mongo;
 
+static constexpr auto lengthFieldName = "_len";
+static constexpr auto splitsFieldName = "_splits";
+
 template<typename T>
 struct Matrix {
 public:

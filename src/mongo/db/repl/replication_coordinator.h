@@ -1030,6 +1030,8 @@ public:
                                                     OnRemoteCmdScheduledFn onRemoteCmdScheduled,
                                                     OnRemoteCmdCompleteFn onRemoteCmdComplete) = 0;
 
+    [[nodiscard]] virtual int getSelfIndex() const noexcept {}
+
     [[nodiscard]] virtual const ErasureCoder &getErasureCoder() const noexcept {}
 
 protected:

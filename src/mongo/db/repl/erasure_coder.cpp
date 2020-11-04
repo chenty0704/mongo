@@ -5,9 +5,6 @@
 #include "mongo/db/index/index_descriptor.h"
 #include "mongo/db/repl/erasure_coder.h"
 
-static constexpr auto splitsFieldName = "_splits";
-static constexpr auto lengthFieldName = "_len";
-
 ErasureCoder::ErasureCoder(int numSourceSplits, int numTotalSplits) :
         _k(numSourceSplits), _m(numTotalSplits),
         _encodeMatrix(_m, _k), _encodeTable((_m - _k) * _k * 32) {
@@ -126,9 +123,9 @@ BSONObj ErasureCoder::encodeDocument(OperationContext &opCtx,
     for (const auto &split : splits)
         splitsBuilder.appendBinData(split.size(), BinDataGeneral, split.data());
 
-    // Append erasure-coded splits and length field.
-    documentBuilder.appendArray(splitsFieldName, splitsBuilder.obj());
+    // Append erasure-coded length and splits field.
     documentBuilder.appendNumber(lengthFieldName, nonIndexedElements.len());
+    documentBuilder.appendArray(splitsFieldName, splitsBuilder.obj());
 
     return documentBuilder.obj();
 }

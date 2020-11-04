@@ -375,7 +375,13 @@ public:
                                             OnRemoteCmdScheduledFn onRemoteCmdScheduled,
                                             OnRemoteCmdCompleteFn onRemoteCmdComplete) override;
 
-    const ErasureCoder &getErasureCoder() const noexcept override;
+    int getSelfIndex() const noexcept override {
+        return _selfIndex;
+    }
+
+    const ErasureCoder &getErasureCoder() const noexcept override {
+        return *_erasureCoder;
+    }
 
     // ================== Test support API ===================
 

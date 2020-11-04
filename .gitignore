@@ -153,6 +153,7 @@ debian/mongodb
 
 # Idea CLion project artifacts
 /.idea/
+/.run/
 /cmake-build-*/
 
 # XCode projects

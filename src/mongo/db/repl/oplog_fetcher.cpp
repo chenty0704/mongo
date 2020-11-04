@@ -39,6 +39,7 @@
 #include "mongo/db/repl/repl_server_parameters_gen.h"
 #include "mongo/db/repl/replication_auth.h"
 #include "mongo/db/repl/replication_coordinator.h"
+#include "mongo/db/repl/erasure_coder.h"
 #include "mongo/db/stats/timer_stats.h"
 #include "mongo/logv2/log.h"
 #include "mongo/rpc/metadata/oplog_query_metadata.h"
@@ -644,12 +645,17 @@ void OplogFetcher::_createNewCursor(bool initialFind) {
         LOGV2_DEBUG(4855902, 1, "Not using exhaust cursors for oplog fetching");
     }
 
+    // Add projection to fetch self split only.
+    auto const opCtx = cc().makeOperationContext();
+    const auto *const replCoord = repl::ReplicationCoordinator::get(opCtx.get());
+    _projection = BSON("o" << BSON(splitsFieldName << BSON("$slice"<< BSON_ARRAY(replCoord->getSelfIndex() << 1))));
+
     _cursor = std::make_unique<DBClientCursor>(_conn.get(),
                                                _nss,
                                                _makeFindQuery(findTimeout),
                                                0 /* nToReturn */,
                                                0 /* nToSkip */,
-                                               nullptr /* fieldsToReturn */,
+                                               &_projection /* fieldsToReturn */,
                                                QueryOption_CursorTailable | QueryOption_AwaitData |
                                                    QueryOption_OplogReplay |
                                                    (useExhaust ? QueryOption_Exhaust : 0),

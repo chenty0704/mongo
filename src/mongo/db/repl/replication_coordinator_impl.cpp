@@ -2312,10 +2312,6 @@ BSONObj ReplicationCoordinatorImpl::runCmdOnPrimaryAndAwaitResponse(
     return cbkResponse.data;
 }
 
-const ErasureCoder &ReplicationCoordinatorImpl::getErasureCoder() const noexcept {
-    return *_erasureCoder;
-}
-
 void ReplicationCoordinatorImpl::_killConflictingOpsOnStepUpAndStepDown(
     AutoGetRstlForStepUpStepDown* arsc, ErrorCodes::Error reason) {
     const OperationContext* rstlOpCtx = arsc->getOpCtx();

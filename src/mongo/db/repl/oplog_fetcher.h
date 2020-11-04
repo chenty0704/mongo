@@ -409,6 +409,8 @@ private:
     executor::TaskExecutor::CallbackHandle _runQueryHandle;
 
     int _lastBatchElapsedMS = 0;
+
+    BSONObj _projection;
 };
 
 }  // namespace repl
