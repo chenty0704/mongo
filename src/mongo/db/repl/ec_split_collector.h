@@ -6,6 +6,7 @@
 #include "mongo/client/dbclient_cursor.h"
 #include "mongo/db/namespace_string.h"
 #include "mongo/db/repl/erasure_coder.h"
+#include "mongo/platform/mutex.h"
 
 namespace mongo {
 namespace repl {
@@ -41,6 +42,7 @@ private:
     BSONObj* _out;
     BSONObj _projection;
     NamespaceString _nss;
+    Mutex _mutex = MONGO_MAKE_LATCH("SplitCollector::_mutex");
     std::vector<std::pair<BSONElement, int>> _splits;
     const ReplicationCoordinator* _replCoord;
 };

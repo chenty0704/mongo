@@ -51,7 +51,7 @@ BSONObj SplitCollector::_makeFindQuery() const {
 }
 
 void SplitCollector::collect() noexcept {
-    const auto& members = _replCoord->getConfig().members();
+    const auto& members = _replCoord->getMemberData();
     _splits.reserve(members.size());
     LOGV2(30011, "SplitCollector::collect, members", "member.size"_attr = members.size());
     for (auto memId = 0; memId < members.size(); ++memId) {
@@ -84,7 +84,7 @@ void SplitCollector::collect() noexcept {
                       "memId"_attr = memId);
 
                 if (qresult.hasField(splitsFieldName)) {
-                    const std::vector<BSONElement>& arr = qresult.getField(splitsFieldName).Array();
+                    const std::vector<BSONElement> arr = qresult.getField(splitsFieldName).Array();
                     // invariant(arr.size() == 1);
                     LOGV2(30019,
                           "collect, array",
@@ -93,7 +93,10 @@ void SplitCollector::collect() noexcept {
                           "[0].type"_attr = typeName(arr[0].type()),
                           "[0].data"_attr = arr[0].toString());
                     checkBSONType(BSONType::BinData, arr[0]);
-                    this->_splits.emplace_back(std::make_pair(arr[0], memId));
+                    {
+                        stdx::lock_guard<Latch> lk(_mutex);
+                        this->_splits.emplace_back(std::make_pair(arr[0], memId));
+                    }
                 } else {
                     // invairant
                     LOGV2(30016,
@@ -113,7 +116,7 @@ void SplitCollector::collect() noexcept {
 
 void SplitCollector::_toBSON() {
     for (const auto& split : _splits) {
-        LOGV2(30018, "SplitCollector::_toBSON()", "split"_attr = split.first.toString());
+        LOGV2(30018, "SplitCollector::_toBSON()", "split"_attr = split.first.toString(), "id"_attr = split.second);
     }
     // get local split
     const std::vector<BSONElement>& arr = _out->getField(splitsFieldName).Array();
