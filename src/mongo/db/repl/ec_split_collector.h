@@ -35,7 +35,7 @@ public:
 private:
     Status _connect(ConnPtr& conn, const HostAndPort& target);
     BSONObj _makeFindQuery() const;
-    void _toBSON() const;
+    void _toBSON();
 
     BSONElement _oidElem;
     BSONObj* _out;

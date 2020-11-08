@@ -2,10 +2,10 @@
 
 #include "mongo/db/repl/ec_split_collector.h"
 
-#include "mongo/bson/util/bson_check.h"
 #include "mongo/bson/bsonobjbuilder.h"
 #include "mongo/bson/mutable/algorithm.h"
 #include "mongo/bson/mutable/document.h"
+#include "mongo/bson/util/bson_check.h"
 #include "mongo/db/jsobj.h"
 #include "mongo/db/repl/replication_coordinator.h"
 #include "mongo/logv2/log.h"
@@ -81,12 +81,17 @@ void SplitCollector::collect() noexcept {
                 }
                 LOGV2(30015,
                       "SplitCollector::collect",
-                      "memId"_attr = memId,
-                      "qresult"_attr = qresult.toString());
+                      "memId"_attr = memId);
 
                 if (qresult.hasField(splitsFieldName)) {
                     const std::vector<BSONElement>& arr = qresult.getField(splitsFieldName).Array();
-                    // invariant(arr.size == 1);
+                    // invariant(arr.size() == 1);
+                    LOGV2(30019,
+                          "collect, array",
+                          "memId"_attr = memId,
+                          "size"_attr = arr.size(),
+                          "[0].type"_attr = typeName(arr[0].type()),
+                          "[0].data"_attr = arr[0].toString());
                     checkBSONType(BSONType::BinData, arr[0]);
                     this->_splits.emplace_back(std::make_pair(arr[0], memId));
                 } else {
@@ -106,16 +111,14 @@ void SplitCollector::collect() noexcept {
     _toBSON();
 }
 
-void SplitCollector::_toBSON() const {
+void SplitCollector::_toBSON() {
     for (const auto& split : _splits) {
-        LOGV2(30018,
-            "SplitCollector::_toBSON()",
-            "split"_attr = split.first.toString());
+        LOGV2(30018, "SplitCollector::_toBSON()", "split"_attr = split.first.toString());
     }
     // get local split
     const std::vector<BSONElement>& arr = _out->getField(splitsFieldName).Array();
     checkBSONType(BSONType::BinData, arr[0]);
-    this->_splits.emplace_back(std::make_pair(arr[0], _replCoord->getSelfIndex()));
+    _splits.emplace_back(std::make_pair(arr[0], _replCoord->getSelfIndex()));
 
     // find splitsFieldName
     mutablebson::Document document(*_out);
@@ -123,7 +126,7 @@ void SplitCollector::_toBSON() const {
 
     // BSONElement, int -> BSONArray -> Element
     // _splits: [[BinData(xxx), 1], [BinData(xxx), 0], [BinData(xxx), 3], ...]
-    splitsField.popBack(); // empty now
+    splitsField.popBack();  // empty now
     BSONArrayBuilder bab;
     for (const auto& split : _splits) {
         bab.append(BSON_ARRAY(split.first << split.second));
