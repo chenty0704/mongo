@@ -1173,6 +1173,7 @@ env.Library(
         'storage/storage_options',
         'storage/remove_saver',
         'update/update_driver',
+        'repl/ec_split_collector',
     ],
     LIBDEPS_PRIVATE=[
         'catalog/database_holder',

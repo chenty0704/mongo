@@ -35,6 +35,7 @@
 #include "mongo/db/exec/requires_collection_stage.h"
 #include "mongo/db/matcher/expression_leaf.h"
 #include "mongo/db/record_id.h"
+#include "mongo/db/repl/ec_split_collector.h"
 
 namespace mongo {
 
@@ -128,6 +129,8 @@ private:
 
     // Stats
     CollectionScanStats _specificStats;
+
+    std::unique_ptr<repl::SplitCollector> _spcltr;
 };
 
 }  // namespace mongo
