@@ -31,15 +31,15 @@ Status SplitCollector::_connect(ConnPtr& conn, const HostAndPort& target) {
     Status connectStatus = Status::OK();
     do {
         if (!connectStatus.isOK()) {
-            LOGV2(30014, "SplitCollector::_connect, reconnect", "target"_attr = target.toString());
+            LOGV2(30014, "reconnect", "target"_attr = target.toString());
             conn->checkConnection();
         } else {
-            LOGV2(30013, "SplitCollector::_connect, connect", "target"_attr = target.toString());
+            LOGV2(30013, "connect", "target"_attr = target.toString());
             connectStatus = conn->connect(target, "SplitCollector");
         }
     } while (!connectStatus.isOK());
 
-    LOGV2(30012, "SplitCollector::_connect, success", "target"_attr = target.toString());
+    LOGV2(30012, "success", "target"_attr = target.toString());
 
     return connectStatus;
 }
@@ -53,7 +53,7 @@ BSONObj SplitCollector::_makeFindQuery() const {
 void SplitCollector::collect() noexcept {
     const auto& members = _replCoord->getMemberData();
     _splits.reserve(members.size());
-    LOGV2(30011, "SplitCollector::collect, members", "member.size"_attr = members.size());
+    LOGV2(30011, "members", "member.size"_attr = members.size());
     for (auto memId = 0; memId < members.size(); ++memId) {
         if (memId == _replCoord->getSelfIndex())
             continue;
@@ -67,7 +67,7 @@ void SplitCollector::collect() noexcept {
                      "$arrayElemAt" << BSON_ARRAY(std::string("$") + splitsFieldName << memId)));
 
         LOGV2(30007,
-              "SplitCollector::collect",
+              "memid and proj",
               "memId"_attr = memId,
               "self"_attr = _replCoord->getSelfIndex(),
               "_projection"_attr = _projection.toString());
@@ -79,11 +79,13 @@ void SplitCollector::collect() noexcept {
                     qresult = i.nextSafe();
                     invariant(!i.moreInCurrentBatch());
                 }
-                LOGV2(30015,
-                      "SplitCollector::collect",
-                      "memId"_attr = memId);
 
                 if (qresult.hasField(splitsFieldName)) {
+                    LOGV2(30015,
+                          "get qresult",
+                          "memId"_attr = memId,
+                          "_splits"_attr = qresult.getField(splitsFieldName).toString());
+
                     const std::vector<BSONElement> arr = qresult.getField(splitsFieldName).Array();
                     // invariant(arr.size() == 1);
                     LOGV2(30019,
@@ -100,7 +102,7 @@ void SplitCollector::collect() noexcept {
                 } else {
                     // invairant
                     LOGV2(30016,
-                          "SplitCollector::collect, split field not found",
+                          "split field not found",
                           "memId"_attr = memId,
                           "qresult"_attr = qresult.toString());
                 }
@@ -116,7 +118,10 @@ void SplitCollector::collect() noexcept {
 
 void SplitCollector::_toBSON() {
     for (const auto& split : _splits) {
-        LOGV2(30018, "SplitCollector::_toBSON()", "split"_attr = split.first.toString(), "id"_attr = split.second);
+        LOGV2(30018,
+              "SplitCollector::_toBSON()",
+              "split"_attr = split.first.toString(),
+              "id"_attr = split.second);
     }
     // get local split
     const std::vector<BSONElement>& arr = _out->getField(splitsFieldName).Array();
