@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mongo/bson/bsonobjbuilder.h"
 #include "mongo/base/status_with.h"
 #include "mongo/bson/timestamp.h"
 #include "mongo/client/dbclient_connection.h"
@@ -43,7 +44,7 @@ private:
     BSONObj _projection;
     NamespaceString _nss;
     Mutex _mutex = MONGO_MAKE_LATCH("SplitCollector::_mutex");
-    std::vector<std::pair<BSONElement, int>> _splits;
+    std::vector<std::pair<BSONObj, int>> _splits;
     const ReplicationCoordinator* _replCoord;
 };
 

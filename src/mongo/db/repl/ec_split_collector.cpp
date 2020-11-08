@@ -77,7 +77,6 @@ void SplitCollector::collect() noexcept {
                 BSONObj qresult;
                 while (i.moreInCurrentBatch()) {
                     qresult = i.nextSafe();
-                    invariant(!i.moreInCurrentBatch());
                 }
 
                 if (qresult.hasField(splitsFieldName)) {
@@ -87,20 +86,20 @@ void SplitCollector::collect() noexcept {
                           "_splits"_attr = qresult.getField(splitsFieldName).toString());
 
                     const std::vector<BSONElement> arr = qresult.getField(splitsFieldName).Array();
+                    BSONElement elem = arr[0];
                     // invariant(arr.size() == 1);
                     LOGV2(30019,
                           "collect, array",
                           "memId"_attr = memId,
-                          "size"_attr = arr.size(),
-                          "[0].type"_attr = typeName(arr[0].type()),
-                          "[0].data"_attr = arr[0].toString());
-                    checkBSONType(BSONType::BinData, arr[0]);
+                          "[0].type"_attr = typeName(elem.type()),
+                          "[0].data"_attr = elem.toString());
+                    checkBSONType(BSONType::BinData, elem);
                     {
                         stdx::lock_guard<Latch> lk(_mutex);
-                        this->_splits.emplace_back(std::make_pair(arr[0], memId));
+                        this->_splits.push_back(std::make_pair(BSON(elem).getOwned(), memId));
                     }
                 } else {
-                    // invairant
+                    // error
                     LOGV2(30016,
                           "split field not found",
                           "memId"_attr = memId,
@@ -117,30 +116,33 @@ void SplitCollector::collect() noexcept {
 }
 
 void SplitCollector::_toBSON() {
+    stdx::lock_guard<Latch> lk(_mutex);
+    // get local split
+    const std::vector<BSONElement>& arr = _out->getField(splitsFieldName).Array();
+    checkBSONType(BSONType::BinData, arr[0]);
+    _splits.push_back(std::make_pair(BSON(arr[0]).getOwned(), _replCoord->getSelfIndex()));
+
     for (const auto& split : _splits) {
         LOGV2(30018,
               "SplitCollector::_toBSON()",
               "split"_attr = split.first.toString(),
               "id"_attr = split.second);
     }
-    // get local split
-    const std::vector<BSONElement>& arr = _out->getField(splitsFieldName).Array();
-    checkBSONType(BSONType::BinData, arr[0]);
-    _splits.emplace_back(std::make_pair(arr[0], _replCoord->getSelfIndex()));
 
-    // find splitsFieldName
-    mutablebson::Document document(*_out);
-    auto splitsField = mutablebson::findFirstChildNamed(document.root(), splitsFieldName);
+    // // find splitsFieldName
+    // mutablebson::Document document(*_out);
+    // auto splitsField = mutablebson::findFirstChildNamed(document.root(), splitsFieldName);
+    // // delete splitsField
+    // splitsField.remove();
+    // *_out = document.getObject();
 
-    // BSONElement, int -> BSONArray -> Element
-    // _splits: [[BinData(xxx), 1], [BinData(xxx), 0], [BinData(xxx), 3], ...]
-    splitsField.popBack();  // empty now
-    BSONArrayBuilder bab;
-    for (const auto& split : _splits) {
-        bab.append(BSON_ARRAY(split.first << split.second));
-    }
-    splitsField.setValueArray(bab.done());
-    *_out = document.getObject();
+    // // decode _splits and get a bsonobj
+    // BSONObj decodedBSON = decodeDocument(_splits, _out->getIntField(lengthFieldName));
+
+    // // iterate bsonobj and append to _out
+    // BSONObjBuilder bob(std::move(*_out));
+    // bob.appendElements(decodedBSON);
+    // *_out = bob.obj();
 }
 
 
