@@ -2,7 +2,9 @@
 
 #include "mongo/db/repl/ec_split_collector.h"
 
+#include "mongo/bson/util/bson_check.h"
 #include "mongo/bson/bsonobjbuilder.h"
+#include "mongo/bson/mutable/algorithm.h"
 #include "mongo/bson/mutable/document.h"
 #include "mongo/db/jsobj.h"
 #include "mongo/db/repl/replication_coordinator.h"
@@ -55,14 +57,14 @@ void SplitCollector::collect() noexcept {
     for (auto memId = 0; memId < members.size(); ++memId) {
         if (memId == _replCoord->getSelfIndex())
             continue;
-        auto target = members[memId].getHostAndPort();
+        const auto target = members[memId].getHostAndPort();
 
         auto conn = std::make_unique<DBClientConnection>(true);
         auto connStatus = _connect(conn, target);
 
-        _projection = BSON(
-            "o" << BSON(splitsFieldName << BSON("$arrayElemAt" << BSON_ARRAY(
-                                                    std::string("$") + splitsFieldName << memId))));
+        _projection =
+            BSON(splitsFieldName << BSON(
+                     "$arrayElemAt" << BSON_ARRAY(std::string("$") + splitsFieldName << memId)));
 
         LOGV2(30007,
               "SplitCollector::collect",
@@ -82,9 +84,11 @@ void SplitCollector::collect() noexcept {
                       "memId"_attr = memId,
                       "qresult"_attr = qresult.toString());
 
-                if (qresult.hasField("o") && qresult.getObjectField("o").hasField(splitsFieldName)) {
-                    this->_splits.emplace_back(std::make_pair(
-                        qresult.getObjectField("o").getStringField(splitsFieldName), memId));
+                if (qresult.hasField(splitsFieldName)) {
+                    const std::vector<BSONElement>& arr = qresult.getField(splitsFieldName).Array();
+                    // invariant(arr.size == 1);
+                    checkBSONType(BSONType::BinData, arr[0]);
+                    this->_splits.emplace_back(std::make_pair(arr[0], memId));
                 } else {
                     // invairant
                     LOGV2(30016,
@@ -95,7 +99,7 @@ void SplitCollector::collect() noexcept {
             },
             _nss,
             _makeFindQuery(),
-            &_projection /* fieldsToReturn */,
+            nullptr /* fieldsToReturn */,
             QueryOption_CursorTailable | QueryOption_SlaveOk | QueryOption_Exhaust);
     }
 
@@ -103,16 +107,28 @@ void SplitCollector::collect() noexcept {
 }
 
 void SplitCollector::_toBSON() const {
-    // _splits[replCoord->getSelfIndex()] = _out->getStringField(splitsFieldName);
+    for (const auto& split : _splits) {
+        LOGV2(30018,
+            "SplitCollector::_toBSON()",
+            "split"_attr = split.first.toString());
+    }
+    // get local split
+    const std::vector<BSONElement>& arr = _out->getField(splitsFieldName).Array();
+    checkBSONType(BSONType::BinData, arr[0]);
+    this->_splits.emplace_back(std::make_pair(arr[0], _replCoord->getSelfIndex()));
 
+    // find splitsFieldName
     mutablebson::Document document(*_out);
-    // auto splitsField = mutablebson::findFirstChildNamed(document.root(), splitsFieldName);
-    // invariant(splitsField.countChildren() == 1);
-    // splitsField.popBack();
+    auto splitsField = mutablebson::findFirstChildNamed(document.root(), splitsFieldName);
 
-    // for (const auto& split : _splits) {
-    //     splitsField.pushBack(split);
-    // }
+    // BSONElement, int -> BSONArray -> Element
+    // _splits: [[BinData(xxx), 1], [BinData(xxx), 0], [BinData(xxx), 3], ...]
+    splitsField.popBack(); // empty now
+    BSONArrayBuilder bab;
+    for (const auto& split : _splits) {
+        bab.append(BSON_ARRAY(split.first << split.second));
+    }
+    splitsField.setValueArray(bab.done());
     *_out = document.getObject();
 }
 

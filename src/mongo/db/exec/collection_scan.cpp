@@ -231,15 +231,16 @@ PlanStage::StageState CollectionScan::doWork(WorkingSetID* out) {
         LOGV2(30006,
                 "PlanExecutorImpl::_getNextImpl, collect splits",
                 "nss"_attr = collection()->ns().toString(),
-                "isOnInternalDb"_attr = collection()->ns().isOnInternalDb(),
-                "primary"_attr = replCoord->getMemberState().primary(),
                 "doc"_attr = bsonToReturn.toString());
         
         _spcltr = std::make_unique<repl::SplitCollector>(replCoord,
                                                          collection()->ns(),
                                                          &bsonToReturn);
         _spcltr->collect();
-        
+
+        LOGV2(30017,
+                "PlanExecutorImpl::_getNextImpl, collecting done",
+                "doc"_attr = bsonToReturn.toString());
     }
 
     member->resetDocument(opCtx()->recoveryUnit()->getSnapshotId(), bsonToReturn);
