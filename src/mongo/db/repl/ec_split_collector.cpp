@@ -137,7 +137,8 @@ void SplitCollector::_toBSON() {
     *_out = document.getObject();
 
     // decode _splits and get a bsonobj
-    BSONObj decodedBSON = decodeDocument(_splits, _out->getIntField(lengthFieldName));
+    const auto &erasureCoder = _replCoord->getErasureCoder();
+    BSONObj decodedBSON = erasureCoder.decodeDocument(_splits, _out->getIntField(lengthFieldName));
 
     // iterate bsonobj and append to _out
     BSONObjBuilder bob(std::move(*_out));
