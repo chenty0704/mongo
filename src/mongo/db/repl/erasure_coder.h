@@ -71,7 +71,8 @@ public:
                                          const IndexCatalog &indexCatalog,
                                          const BSONObj &document) const;
 
-    [[nodiscard]] BSONObj decodeDocument(const BSONObj &document) const;
+    [[nodiscard]] BSONObj decodeDocument(const std::vector<std::pair<BSONObj, int>>& splits,
+                                         int size) const;
 
 private:
     int _k, _m;

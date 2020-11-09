@@ -130,8 +130,25 @@ BSONObj ErasureCoder::encodeDocument(OperationContext &opCtx,
     return documentBuilder.obj();
 }
 
-BSONObj ErasureCoder::decodeDocument(const BSONObj &document) const {
-    return BSONObj();
+
+BSONObj ErasureCoder::decodeDocument(const std::vector<std::pair<BSONObj, int>>& splits,
+                                     int size) const {
+    std::vector<std::pair<const std::byte*, int>> splitsWithIdxs(_k);
+    std::transform(splits.cbegin(),
+                   splits.cbegin() + _k,
+                   splitsWithIdxs.begin(),
+                   [](const std::pair<BSONObj, int>& split) {
+                       // BSONObj -> std::byte*
+                       return std::make_pair(reinterpret_cast<const std::byte*>(split.first[0].rawdata()),
+                                             split.second);
+                   });
+    const int splitSize = size % _k == 0 ? size / _k : size / _k + 1;
+    std::vector<std::byte> decoded = decodeData(splitsWithIdxs, splitSize);
+    // vector<byte> -> bson : return {_splits: BinData(xxx)}
+    // BSONObjBuilder builder;
+    // builder.appendBinData(splitsFieldName, size, BinDataGeneral, reinterpret_cast<const void*>(decoded.data()));
+    
+    return BSONObj(reinterpret_cast<const char*>(decoded.data()));
 }
 
 

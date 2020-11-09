@@ -129,20 +129,20 @@ void SplitCollector::_toBSON() {
               "id"_attr = split.second);
     }
 
-    // // find splitsFieldName
-    // mutablebson::Document document(*_out);
-    // auto splitsField = mutablebson::findFirstChildNamed(document.root(), splitsFieldName);
-    // // delete splitsField
-    // splitsField.remove();
-    // *_out = document.getObject();
+    // find splitsFieldName
+    mutablebson::Document document(*_out);
+    auto splitsField = mutablebson::findFirstChildNamed(document.root(), splitsFieldName);
+    // delete splitsField
+    splitsField.remove();
+    *_out = document.getObject();
 
-    // // decode _splits and get a bsonobj
-    // BSONObj decodedBSON = decodeDocument(_splits, _out->getIntField(lengthFieldName));
+    // decode _splits and get a bsonobj
+    BSONObj decodedBSON = decodeDocument(_splits, _out->getIntField(lengthFieldName));
 
-    // // iterate bsonobj and append to _out
-    // BSONObjBuilder bob(std::move(*_out));
-    // bob.appendElements(decodedBSON);
-    // *_out = bob.obj();
+    // iterate bsonobj and append to _out
+    BSONObjBuilder bob(std::move(*_out));
+    bob.appendElements(decodedBSON);
+    *_out = bob.obj();
 }
 
 
