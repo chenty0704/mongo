@@ -104,8 +104,6 @@ public:
      * Formats working set member object created with allocateStatusMember().
      */
     static std::string toStatusString(const BSONObj& obj);
-
-    std::unique_ptr<repl::SplitCollector> _spcltr;
 };
 
 }  // namespace mongo
