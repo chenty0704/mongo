@@ -8,8 +8,8 @@
 
 using namespace mongo;
 
-static constexpr auto lengthFieldName = "_len";
-static constexpr auto splitsFieldName = "_splits";
+inline const std::string lengthFieldName = "_len";
+inline const std::string splitsFieldName = "_splits";
 
 template<typename T>
 struct Matrix {

@@ -120,7 +120,6 @@ void SplitCollector::_toBSON() {
     // get local split
     const std::vector<BSONElement>& arr = _out->getField(splitsFieldName).Array();
     checkBSONType(BSONType::BinData, arr[0]);
-    _splits.push_back(std::make_pair(BSON(arr[0]).getOwned(), _replCoord->getSelfIndex()));
 
     for (const auto& split : _splits) {
         LOGV2(30018,
@@ -129,21 +128,12 @@ void SplitCollector::_toBSON() {
               "id"_attr = split.second);
     }
 
-    // find splitsFieldName
-    mutablebson::Document document(*_out);
-    auto splitsField = mutablebson::findFirstChildNamed(document.root(), splitsFieldName);
-    // delete splitsField
-    splitsField.remove();
-    *_out = document.getObject();
+    // TODO-EXT: Collect k splits only.
+    while (_splits.size() > _replCoord->getConfig().getNumSourceSplits() - 1)
+        _splits.pop_back();
 
-    // decode _splits and get a bsonobj
     const auto &erasureCoder = _replCoord->getErasureCoder();
-    BSONObj decodedBSON = erasureCoder.decodeDocument(_splits, _out->getIntField(lengthFieldName));
-
-    // iterate bsonobj and append to _out
-    BSONObjBuilder bob(std::move(*_out));
-    bob.appendElements(decodedBSON);
-    *_out = bob.obj();
+    *_out = erasureCoder.decodeDocument({*_out, _replCoord->getSelfIndex()}, _splits);
 }
 
 

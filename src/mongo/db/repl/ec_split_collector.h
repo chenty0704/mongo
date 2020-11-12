@@ -32,8 +32,6 @@ public:
     virtual ~SplitCollector();
     void collect() noexcept;
 
-    std::vector<std::string> getSplits() const;
-
 private:
     Status _connect(ConnPtr& conn, const HostAndPort& target);
     BSONObj _makeFindQuery() const;
