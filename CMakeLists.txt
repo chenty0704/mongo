@@ -26,6 +26,7 @@ set(SCONS_VARIABLES
         MONGO_VERSION=4.4.0-ec)
 if (CMAKE_BUILD_TYPE STREQUAL Debug)
     list(APPEND SCONS_OPTIONS --dbg=on)
+    set(SCONS_BINARY_DIR ${PROJECT_BINARY_DIR}/debug)
 elseif (CMAKE_BUILD_TYPE STREQUAL Release)
     list(APPEND SCONS_OPTIONS --release)
 endif ()
@@ -39,3 +40,6 @@ import_scons_target(mongos install-mongos)
 import_scons_target(mongo install-mongo)
 import_scons_target(unittests install-unittests)
 import_scons_target(integration_tests install-integration-tests)
+
+# Import SCons unit tests.
+import_scons_target(erasure_coder_test ${SCONS_BINARY_DIR}/mongo/db/repl/erasure_coder_test)

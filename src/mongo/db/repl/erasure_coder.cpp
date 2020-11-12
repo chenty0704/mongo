@@ -19,7 +19,7 @@ std::vector<std::vector<std::byte>> ErasureCoder::encodeData(const std::byte *da
     std::vector<std::vector<std::byte>> splits(_m, std::vector<std::byte>(splitSize));
     for (auto i = 0; i < _k - 1; ++i)
         std::copy(data + i * splitSize, data + (i + 1) * splitSize, splits[i].begin());
-    std::copy(data + (_k - 1) * splitSize, data + size, splits.back().begin());
+    std::copy(data + (_k - 1) * splitSize, data + size, splits[_k - 1].begin());
 
     // Create views of buffers for source splits and parity splits respectively.
     std::vector<const std::byte *> sourceSplits(_k);
@@ -131,24 +131,30 @@ BSONObj ErasureCoder::encodeDocument(OperationContext &opCtx,
 }
 
 
-BSONObj ErasureCoder::decodeDocument(const std::vector<std::pair<BSONObj, int>>& splits,
-                                     int size) const {
-    std::vector<std::pair<const std::byte*, int>> splitsWithIdxs(_k);
-    std::transform(splits.cbegin(),
-                   splits.cbegin() + _k,
-                   splitsWithIdxs.begin(),
-                   [](const std::pair<BSONObj, int>& split) {
-                       // BSONObj -> std::byte*
-                       return std::make_pair(reinterpret_cast<const std::byte*>(split.first[0].rawdata()),
-                                             split.second);
-                   });
-    const int splitSize = size % _k == 0 ? size / _k : size / _k + 1;
-    std::vector<std::byte> decoded = decodeData(splitsWithIdxs, splitSize);
-    // vector<byte> -> bson : return {_splits: BinData(xxx)}
-    // BSONObjBuilder builder;
-    // builder.appendBinData(splitsFieldName, size, BinDataGeneral, reinterpret_cast<const void*>(decoded.data()));
-    
-    return BSONObj(reinterpret_cast<const char*>(decoded.data()));
+BSONObj ErasureCoder::decodeDocument(const std::pair<BSONObj, int> &primaryDocumentWithIdx,
+                                     const std::vector<std::pair<BSONObj, int>> &secondarySplitsWithIdxs) const {
+    // Initialize views of buffers for existing splits
+    std::vector<std::pair<const std::byte *, int>> splitsWithIdxs;
+    const auto &[primaryDocument, primaryIdx] = primaryDocumentWithIdx;
+    const auto primarySplit = primaryDocument.getObjectField(splitsFieldName).getField("0");
+    int splitSize;
+    splitsWithIdxs.emplace_back(reinterpret_cast<const std::byte *>(primarySplit.binData(splitSize)), primaryIdx);
+    for (const auto &[splitsField, idx] : secondarySplitsWithIdxs) {
+        const auto split = splitsField.getField("0");
+        splitsWithIdxs.emplace_back(reinterpret_cast<const std::byte *>(split.binData(splitSize)), idx);
+    }
+
+    // Decode non-indexed (erasure-coded) fields.
+    const auto nonIndexedData = decodeData(splitsWithIdxs, splitSize);
+
+    // Build the decoded document.
+    BSONObjBuilder documentBuilder;
+    for (const auto &element : primaryDocument) {
+        if (element.fieldName() != splitsFieldName && element.fieldName() != lengthFieldName)
+            documentBuilder << element;
+    }
+    const auto length = primaryDocument.getIntField(lengthFieldName);
+    documentBuilder.bb().appendBuf(nonIndexedData.data(), length);
+
+    return documentBuilder.obj();
 }
-
-

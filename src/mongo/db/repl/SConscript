@@ -1464,6 +1464,16 @@ env.Library(
     ]
 )
 
+env.CppUnitTest(
+    target='erasure_coder_test',
+    source=[
+        'erasure_coder_test.cpp',
+    ],
+    LIBDEPS_PRIVATE=[
+        'erasure_coder'
+    ]
+)
+
 env.Library(
     target='ec_split_collector',
     source=[
