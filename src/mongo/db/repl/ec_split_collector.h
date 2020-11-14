@@ -34,6 +34,7 @@ public:
 
 private:
     Status _connect(ConnPtr& conn, const HostAndPort& target);
+    void _collect_per_target(const int memId);
     BSONObj _makeFindQuery() const;
     void _toBSON();
 
@@ -42,8 +43,10 @@ private:
     BSONObj _projection;
     NamespaceString _nss;
     Mutex _mutex = MONGO_MAKE_LATCH("SplitCollector::_mutex");
+    stdx::condition_variable _cv;
     std::vector<std::pair<BSONObj, int>> _splits;
     const ReplicationCoordinator* _replCoord;
+    const int _nNeed;
 };
 
 }  // namespace repl
