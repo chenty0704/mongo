@@ -54,7 +54,7 @@ BSONObj SplitCollector::_makeFindQuery() const {
 
 void SplitCollector::collect() noexcept {
     stdx::condition_variable cv;
-    auto needed = _replCoord->getConfig().getNumSourceSplits() - 1;
+    auto nNeed = _replCoord->getConfig().getNumSourceSplits() - 1;
     const auto& members = _replCoord->getMemberData();
     _splits.reserve(members.size());
     LOGV2(30011, "members", "member.size"_attr = members.size());
@@ -62,7 +62,7 @@ void SplitCollector::collect() noexcept {
         if (memId == _replCoord->getSelfIndex())
             continue;
 
-        stdx::thread{[=, &cv] {
+        stdx::thread{[=] {
             const auto target = members[memId].getHostAndPort();
 
             auto conn = std::make_unique<DBClientConnection>(true);
@@ -78,13 +78,9 @@ void SplitCollector::collect() noexcept {
                   "self"_attr = _replCoord->getSelfIndex(),
                   "_projection"_attr = _projection.toString());
 
+            BSONObj splitBSONObj;
             conn->query(
-                [=](DBClientCursorBatchIterator& i) {
-                    {
-                        stdx::lock_guard<Latch> lk(_mutex);
-                        if (_splits.size() >= needed)
-                            return;
-                    }
+                [=, &splitBSONObj](DBClientCursorBatchIterator& i) {
                     BSONObj qresult;
                     while (i.moreInCurrentBatch()) {
                         qresult = i.nextSafe();
@@ -106,11 +102,7 @@ void SplitCollector::collect() noexcept {
                               "[0].type"_attr = typeName(elem.type()),
                               "[0].data"_attr = elem.toString());
                         checkBSONType(BSONType::BinData, elem);
-                        {
-                            stdx::lock_guard<Latch> lk(_mutex);
-                            this->_splits.push_back(std::make_pair(BSON(elem).getOwned(), memId));
-                            cv.notify_all();  // notify the main thread
-                        }
+                        splitBSONObj = std::make_pair(BSON(elem);
                     } else {
                         // error
                         LOGV2(30016,
@@ -123,13 +115,21 @@ void SplitCollector::collect() noexcept {
                 _makeFindQuery(),
                 nullptr /* fieldsToReturn */,
                 QueryOption_CursorTailable | QueryOption_SlaveOk | QueryOption_Exhaust);
+
+            {
+                stdx::lock_guard<Latch> lk(_mutex);
+                if (_splits.size() < nNeed) {
+                    _splits.push_back(std::make_pair(splitBSONObj.getOwned(), memId));
+                }
+                cv.notify_all();  // notify the main thread
+            }
         }}.detach();
     }
 
     {
         stdx::lock_guard<Latch> lk(_mutex);
-        while (_splits.size() < needed)
-            cv.wait(lk, [=] { return this->_splits.size() >= needed });
+        while (_splits.size() < nNeed)
+            cv.wait(lk, [=] { return this->_splits.size() >= nNeed });
     }
 
     _toBSON();
@@ -153,7 +153,7 @@ void SplitCollector::_toBSON() {
         while (_splits.size() > _replCoord->getConfig().getNumSourceSplits() - 1)
             _splits.pop_back();
     }
-    // _splits is now read-only, no lock needed
+    // _splits is now read-only, no lock nNeed
     const auto& erasureCoder = _replCoord->getErasureCoder();
     *_out = erasureCoder.decodeDocument({*_out, _replCoord->getSelfIndex()}, _splits);
 }
