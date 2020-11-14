@@ -62,7 +62,7 @@ void SplitCollector::collect() noexcept {
         if (memId == _replCoord->getSelfIndex())
             continue;
 
-        stdx::thread{[=] {
+        stdx::thread{[=, &cv] {
             const auto target = members[memId].getHostAndPort();
 
             auto conn = std::make_unique<DBClientConnection>(true);
@@ -102,7 +102,7 @@ void SplitCollector::collect() noexcept {
                               "[0].type"_attr = typeName(elem.type()),
                               "[0].data"_attr = elem.toString());
                         checkBSONType(BSONType::BinData, elem);
-                        splitBSONObj = std::make_pair(BSON(elem);
+                        splitBSONObj = BSON(elem);
                     } else {
                         // error
                         LOGV2(30016,
@@ -117,7 +117,7 @@ void SplitCollector::collect() noexcept {
                 QueryOption_CursorTailable | QueryOption_SlaveOk | QueryOption_Exhaust);
 
             {
-                stdx::lock_guard<Latch> lk(_mutex);
+                stdx::unique_lock<Latch> lk(_mutex);
                 if (_splits.size() < nNeed) {
                     _splits.push_back(std::make_pair(splitBSONObj.getOwned(), memId));
                 }
@@ -127,9 +127,9 @@ void SplitCollector::collect() noexcept {
     }
 
     {
-        stdx::lock_guard<Latch> lk(_mutex);
+        stdx::unique_lock<Latch> lk(_mutex);
         while (_splits.size() < nNeed)
-            cv.wait(lk, [=] { return this->_splits.size() >= nNeed });
+            cv.wait(lk, [=] { return this->_splits.size() >= nNeed; });
     }
 
     _toBSON();
