@@ -10,6 +10,7 @@
 #include "mongo/db/repl/replication_coordinator.h"
 #include "mongo/logv2/log.h"
 #include "mongo/stdx/condition_variable.h"
+#include "mongo/stdx/future.h"
 #include "mongo/stdx/thread.h"
 
 namespace mongo {
@@ -18,9 +19,12 @@ namespace repl {
 SplitCollector::SplitCollector(const ReplicationCoordinator* replCoord,
                                const NamespaceString& nss,
                                BSONObj* out)
-    : _replCoord(replCoord), _nss(nss), _out(out) {
+    : _replCoord(replCoord),
+      _nss(nss),
+      _out(out),
+      _nNeed(replCoord->getConfig().getNumSourceSplits() - 1) {
     out->getObjectID(_oidElem);
-    _nNeed = _replCoord->getConfig().getNumSourceSplits() - 1;
+    _projection = BSON(splitsFieldName << 1 << "_id" << 0);
     LOGV2(30008,
           "SplitCollector::SplitCollector",
           "ns"_attr = _nss.toString(),
@@ -59,14 +63,6 @@ void SplitCollector::_collect_per_target(const int memId) {
 
     auto conn = std::make_unique<DBClientConnection>(true);
     auto connStatus = _connect(conn, target);
-
-    _projection = BSON(splitsFieldName << 1 << "_id" << 0);
-
-    LOGV2(30007,
-          "memid and proj",
-          "memId"_attr = memId,
-          "self"_attr = _replCoord->getSelfIndex(),
-          "_projection"_attr = _projection.toString());
 
     BSONObj splitBSONObj;
     conn->query(
@@ -114,16 +110,14 @@ void SplitCollector::_collect_per_target(const int memId) {
 }
 
 void SplitCollector::collect() noexcept {
-    std::vector<stdx::future<bool>> futs;
+    std::vector<stdx::future<void>> futs;
     const auto& members = _replCoord->getMemberData();
     _splits.reserve(members.size());
     for (auto memId = 0; memId < members.size(); ++memId) {
         if (memId == _replCoord->getSelfIndex())
             continue;
 
-        futs.push_back(stdx::async(stdx::launch::async, [=] {
-            _collect_per_target(memId);
-        }));
+        futs.push_back(stdx::async(stdx::launch::async, [=] { _collect_per_target(memId); }));
     }
 
     {
@@ -135,7 +129,8 @@ void SplitCollector::collect() noexcept {
     _toBSON();
 
     // finished, wait for all the futures
-    for (auto &fut : futs) fut.wait();
+    for (auto& fut : futs)
+        fut.wait();
 }
 
 void SplitCollector::_toBSON() {
