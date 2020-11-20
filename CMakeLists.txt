@@ -29,6 +29,7 @@ if (CMAKE_BUILD_TYPE STREQUAL Debug)
     set(SCONS_BINARY_DIR ${PROJECT_BINARY_DIR}/debug)
 elseif (CMAKE_BUILD_TYPE STREQUAL Release)
     list(APPEND SCONS_OPTIONS --release)
+    set(SCONS_BINARY_DIR ${PROJECT_BINARY_DIR}/opt)
 endif ()
 
 # Import top-level SCons targets.
