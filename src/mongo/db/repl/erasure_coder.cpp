@@ -100,7 +100,7 @@ BSONObj ErasureCoder::encodeDocument(OperationContext &opCtx,
     BufBuilder nonIndexedElements;
 
     static const auto isFieldIndexed = [&](std::string_view name) {
-        for (auto it = indexCatalog.getIndexIterator(&opCtx, false); it->more();) {
+        for (auto it = indexCatalog.getIndexIterator(&opCtx, true); it->more();) {
             const auto *const indexDescriptor = it->next()->descriptor();
             if (indexDescriptor->indexName().find(name) != std::string::npos)
                 return true;

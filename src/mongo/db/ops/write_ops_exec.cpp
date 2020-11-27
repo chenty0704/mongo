@@ -607,7 +607,7 @@ WriteResult performInserts(OperationContext* opCtx,
                 }
             }
 
-            BSONObj toInsert = fixedDoc.getValue().isEmpty() ? doc : std::move(fixedDoc.getValue());
+            BSONObj toInsert = fixedDoc.getValue().isEmpty() ? doc : fixedDoc.getValue();
             if (!wholeOp.getNamespace().isOnInternalDb()) {
                 const auto *const replCoord = repl::ReplicationCoordinator::get(opCtx);
                 const auto *const collection = CollectionCatalog::get(opCtx).
