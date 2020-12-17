@@ -8,6 +8,8 @@ include(CMakePrintHelpers)
 include(SConsHelpers)
 
 # Set compiler options.
+set(CMAKE_C_COMPILER gcc-9)
+set(CMAKE_CXX_COMPILER g++-9)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_FLAGS -w)
