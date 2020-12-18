@@ -36,12 +36,12 @@
 #include "mongo/base/status.h"
 #include "mongo/base/status_with.h"
 #include "mongo/bson/timestamp.h"
+#include "mongo/db/repl/erasure_coder.h"
 #include "mongo/db/repl/member_data.h"
 #include "mongo/db/repl/member_state.h"
 #include "mongo/db/repl/repl_settings.h"
 #include "mongo/db/repl/split_horizon.h"
 #include "mongo/db/repl/sync_source_selector.h"
-#include "mongo/db/repl/erasure_coder.h"
 #include "mongo/db/storage/storage_engine_init.h"
 #include "mongo/executor/task_executor.h"
 #include "mongo/rpc/topology_version_gen.h"
@@ -1032,7 +1032,7 @@ public:
 
     [[nodiscard]] virtual int getSelfIndex() const noexcept {}
 
-    [[nodiscard]] virtual const ErasureCoder &getErasureCoder() const noexcept {}
+    [[nodiscard]] virtual const ErasureCoder& getErasureCoder() const noexcept {}
 
 protected:
     ReplicationCoordinator();

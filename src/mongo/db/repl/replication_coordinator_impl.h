@@ -362,8 +362,8 @@ public:
         boost::optional<TopologyVersion> clientTopologyVersion,
         boost::optional<Date_t> deadline) override;
 
-    virtual StatusWith<OpTime> getLatestWriteOpTime(OperationContext* opCtx) const
-        noexcept override;
+    virtual StatusWith<OpTime> getLatestWriteOpTime(
+        OperationContext* opCtx) const noexcept override;
 
     virtual HostAndPort getCurrentPrimaryHostAndPort() const override;
 
@@ -379,7 +379,7 @@ public:
         return _selfIndex;
     }
 
-    const ErasureCoder &getErasureCoder() const noexcept override {
+    const ErasureCoder& getErasureCoder() const noexcept override {
         return *_erasureCoder;
     }
 
@@ -1639,7 +1639,7 @@ private:
     AtomicWord<int64_t> _cachedTopologyVersionCounter;  // (S)
 
     // The erasure coder for the replica set.
-    std::unique_ptr<ErasureCoder> _erasureCoder; // (R)
+    std::unique_ptr<ErasureCoder> _erasureCoder;  // (R)
 };
 
 }  // namespace repl

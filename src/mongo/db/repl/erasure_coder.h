@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdexcept>
 #include <vector>
 
 #include "mongo/bson/bsonobjbuilder.h"
@@ -11,15 +10,16 @@ using namespace mongo;
 inline const std::string lengthFieldName = "_len";
 inline const std::string splitsFieldName = "_splits";
 
-template<typename T>
+template <typename T>
 struct Matrix {
 public:
-    Matrix(int numRows, int numCols) : _data(numRows * numCols), _numRows(numRows), _numCols(numCols) {}
+    Matrix(int numRows, int numCols)
+        : _data(numRows * numCols), _numRows(numRows), _numCols(numCols) {}
 
-    [[nodiscard]] T *data() noexcept {
+    [[nodiscard]] T* data() noexcept {
         return _data.data();
     }
-    [[nodiscard]] const T *data() const noexcept {
+    [[nodiscard]] const T* data() const noexcept {
         return _data.data();
     }
 
@@ -34,10 +34,10 @@ public:
         return _numRows * _numCols;
     }
 
-    T &operator()(int i, int j) noexcept {
+    T& operator()(int i, int j) noexcept {
         return _data[i * _numCols + j];
     }
-    const T &operator()(int i, int j) const noexcept {
+    const T& operator()(int i, int j) const noexcept {
         return _data[i * _numCols + j];
     }
 
@@ -62,25 +62,22 @@ public:
         return _m - _k;
     }
 
-    [[nodiscard]] std::vector<std::vector<std::byte>> encodeData(const std::byte *data, int size) const;
+    [[nodiscard]] std::vector<std::vector<std::byte>> encodeData(const std::byte* data,
+                                                                 int size) const;
 
-    [[nodiscard]] std::vector<std::byte>
-    decodeData(const std::vector<std::pair<const std::byte *, int>> &splitsWithIdxs, int splitSize) const;
+    [[nodiscard]] std::vector<std::byte> decodeData(
+        const std::vector<std::pair<const std::byte*, int>>& splitsWithIdxs, int splitSize) const;
 
-    [[nodiscard]] BSONObj encodeDocument(OperationContext &opCtx,
-                                         const IndexCatalog &indexCatalog,
-                                         const BSONObj &document) const;
+    [[nodiscard]] BSONObj encodeDocument(OperationContext& opCtx,
+                                         const IndexCatalog& indexCatalog,
+                                         const BSONObj& document) const;
 
-    [[nodiscard]] BSONObj decodeDocument(const std::pair<BSONObj, int> &primaryDocumentWithIdx,
-                                         const std::vector<std::pair<BSONObj, int>> &secondarySplitsWithIdxs) const;
+    [[nodiscard]] BSONObj decodeDocument(
+        const std::pair<BSONObj, int>& primaryDocumentWithIdx,
+        const std::vector<std::pair<BSONObj, int>>& secondarySplitsWithIdxs) const;
 
 private:
     int _k, _m;
     Matrix<uint8_t> _encodeMatrix;
     std::vector<uint8_t> _encodeTable;
-};
-
-class ErasureCodingException : public std::runtime_error {
-public:
-    using std::runtime_error::runtime_error;
 };

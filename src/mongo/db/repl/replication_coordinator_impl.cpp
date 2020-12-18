@@ -2230,8 +2230,8 @@ std::shared_ptr<const IsMasterResponse> ReplicationCoordinatorImpl::awaitIsMaste
     return statusWithIsMaster.getValue();
 }
 
-StatusWith<OpTime> ReplicationCoordinatorImpl::getLatestWriteOpTime(OperationContext* opCtx) const
-    noexcept try {
+StatusWith<OpTime> ReplicationCoordinatorImpl::getLatestWriteOpTime(
+    OperationContext* opCtx) const noexcept try {
     ShouldNotConflictWithSecondaryBatchApplicationBlock noPBWMBlock(opCtx->lockState());
     Lock::GlobalLock globalLock(opCtx, MODE_IS);
     // Check if the node is primary after acquiring global IS lock.
@@ -4146,7 +4146,8 @@ ReplicationCoordinatorImpl::_setCurrentRSConfig(WithLock lk,
     _protVersion.store(_rsConfig.getProtocolVersion());
 
     // Initialize the erasure coder.
-    _erasureCoder = std::make_unique<ErasureCoder>(_rsConfig.getNumSourceSplits(), _rsConfig.getNumTotalSplits());
+    _erasureCoder = std::make_unique<ErasureCoder>(_rsConfig.getNumSourceSplits(),
+                                                   _rsConfig.getNumTotalSplits());
 
     // Warn if using the in-memory (ephemeral) storage engine or running running --nojournal with
     // writeConcernMajorityJournalDefault=true.

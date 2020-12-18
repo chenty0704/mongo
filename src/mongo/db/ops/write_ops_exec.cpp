@@ -350,6 +350,16 @@ void insertDocuments(OperationContext* opCtx,
             return !collElem || collection->ns().ns() == collElem.str();
         });
 
+    // Encode documents inserted by users.
+    if (!collection->ns().isOnInternalDb()) {
+        const auto* const replCoord = repl::ReplicationCoordinator::get(opCtx);
+        const auto* const indexCatalog = collection->getIndexCatalog();
+        const auto& erasureCoder = replCoord->getErasureCoder();
+        std::for_each(begin, end, [&](InsertStatement& statement) {
+            statement.doc = erasureCoder.encodeDocument(*opCtx, *indexCatalog, statement.doc);
+        });
+    }
+
     uassertStatusOK(
         collection->insertDocuments(opCtx, begin, end, &CurOp::get(opCtx)->debug(), fromMigrate));
     wuow.commit();
@@ -607,17 +617,7 @@ WriteResult performInserts(OperationContext* opCtx,
                 }
             }
 
-            BSONObj toInsert = fixedDoc.getValue().isEmpty() ? doc : fixedDoc.getValue();
-            if (!wholeOp.getNamespace().isOnInternalDb()) {
-                const auto *const replCoord = repl::ReplicationCoordinator::get(opCtx);
-                const auto *const collection = CollectionCatalog::get(opCtx).
-                        lookupCollectionByNamespace(opCtx, wholeOp.getNamespace());
-                const auto *const indexCatalog = collection->getIndexCatalog();
-                const auto &erasureCoder = replCoord->getErasureCoder();
-
-                toInsert = erasureCoder.encodeDocument(*opCtx, *indexCatalog, toInsert);
-            }
-
+            BSONObj toInsert = fixedDoc.getValue().isEmpty() ? doc : std::move(fixedDoc.getValue());
             batch.emplace_back(stmtId, toInsert);
             bytesInBatch += batch.back().doc.objsize();
             if (!isLastDoc && batch.size() < maxBatchSize && bytesInBatch < maxBatchBytes)
