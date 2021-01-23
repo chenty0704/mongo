@@ -10,7 +10,7 @@ import gdb
 try:
     # Try to find and load the C++ pretty-printer library.
     import glob
-    pp = glob.glob("/usr/share/gcc-*/python/libstdcxx/v6/printers.py")
+    pp = glob.glob("/usr/share/gcc*/python/libstdcxx/v6/printers.py")
     printers = pp[0]
     path = os.path.dirname(os.path.dirname(os.path.dirname(printers)))
     sys.path.insert(0, path)
