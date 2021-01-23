@@ -1,0 +1,19 @@
+#cloud-config
+
+apt_update: true
+apt_upgrade: true
+apt_reboot_if_required: true
+
+packages:
+  - isal
+
+snap:
+  commands:
+    - snap install powershell --classic
+
+write_files:
+  - path: /tmp/pwshscripts/Setup-MongoDbVM.ps1
+    content: {0}
+
+runcmd:
+  - pwsh -File /tmp/pwshscripts/Setup-MongoDbVM.ps1 -UserName {1}
