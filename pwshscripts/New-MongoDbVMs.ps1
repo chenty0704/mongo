@@ -6,8 +6,6 @@ Param(
     $VirtualNetwork = $(Get-AzVirtualNetwork -Name "vnet-eastus" -ResourceGroupName "rg-vnet"),
     [Microsoft.Azure.Commands.Network.Models.PSSubnet]
     $Subnet = $(Get-AzVirtualNetworkSubnetConfig -Name "snet-eastus-001" -VirtualNetwork $VirtualNetwork),
-    [Microsoft.Azure.Commands.Network.Models.PSNetworkSecurityGroup]
-    $NetworkSecurityGroup = $(Get-AzNetworkSecurityGroup -Name "nsg-mongodballow" -ResourceGroupName "rg-vnet"),
     [string] $VirtualMachineSize = "Standard_D4s_v4",
     [int] $OSDiskSizeInGB = 64,
     [System.Management.Automation.PSCredential]
@@ -42,7 +40,6 @@ for ($i = 0; $i -lt $NumVMs; $i++) {
         -ResourceGroupName $ResourceGroupName `
         -Location $Location `
         -IpConfiguration $ipConfig `
-        -NetworkSecurityGroup $NetworkSecurityGroup `
         -EnableAcceleratedNetworking
 
     # Create the custom data.

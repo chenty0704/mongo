@@ -5,7 +5,7 @@ Param (
 # Start PowerShell upon login.
 $homeDirectory = "/home/$UserName"
 Copy-Item -Path "/etc/skel/.bashrc" -Destination $homeDirectory
-Add-Content -Path "$homeDirectory/.bashrc" -Value "`n# Start PowerShell`npwsh"
+Add-Content -Path "$homeDirectory/.bashrc" -Value "`n# Start PowerShell.`npwsh"
 
 # Enable PowerShell remoting.
 $sshConfigPath = "/etc/ssh/sshd_config"
