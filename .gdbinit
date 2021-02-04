@@ -9,3 +9,6 @@ source buildscripts/gdb/mongo_printers.py
 
 # Load the mongodb lock analysis
 source buildscripts/gdb/mongo_lock.py
+
+# Enable faster loading using cache
+set index-cache on
