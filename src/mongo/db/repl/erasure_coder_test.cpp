@@ -1,4 +1,5 @@
 #include "mongo/unittest/unittest.h"
+
 #include "mongo/db/repl/erasure_coder.h"
 
 using namespace std::string_view_literals;

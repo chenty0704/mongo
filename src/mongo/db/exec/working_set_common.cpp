@@ -40,7 +40,6 @@
 #include "mongo/db/exec/working_set.h"
 #include "mongo/db/index/index_access_method.h"
 #include "mongo/db/query/canonical_query.h"
-#include "mongo/db/repl/ec_split_collector.h"
 #include "mongo/db/service_context.h"
 #include "mongo/logv2/log.h"
 
@@ -117,26 +116,7 @@ bool WorkingSetCommon::fetch(OperationContext* opCtx,
     }
 
     auto currentSnapshotId = opCtx->recoveryUnit()->getSnapshotId();
-    BSONObj bsonToReturn = record->data.releaseToBson();
-
-    // repl for split collector
-    const auto* replCoord = repl::ReplicationCoordinator::get(opCtx);
-    if (!ns.isOnInternalDb() &&
-        replCoord->getMemberState().primary()) {  // so far only primary serves read
-        LOGV2(30021,
-              "WorkingSetCommon::fetch, collect splits",
-              "nss"_attr = ns.toString(),
-              "doc"_attr = bsonToReturn.toString());
-
-        auto _spcltr = std::make_unique<repl::SplitCollector>(replCoord, ns, &bsonToReturn);
-        _spcltr->collect();
-
-        LOGV2(30022,
-              "WorkingSetCommon::fetch, collecting done",
-              "doc"_attr = bsonToReturn.toString());
-    }
-
-    member->resetDocument(opCtx->recoveryUnit()->getSnapshotId(), bsonToReturn);
+    member->resetDocument(currentSnapshotId, record->data.releaseToBson());
 
     // Make sure that all of the keyData is still valid for this copy of the document.  This ensures
     // both that index-provided filters and sort orders still hold.

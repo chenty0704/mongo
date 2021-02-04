@@ -45,7 +45,6 @@
 #include "mongo/db/storage/oplog_hack.h"
 #include "mongo/logv2/log.h"
 #include "mongo/util/fail_point.h"
-#include "mongo/db/repl/ec_split_collector.h"
 
 #include "mongo/db/client.h"  // XXX-ERH
 
@@ -223,27 +222,7 @@ PlanStage::StageState CollectionScan::doWork(WorkingSetID* out) {
     WorkingSetID id = _workingSet->allocate();
     WorkingSetMember* member = _workingSet->get(id);
     member->recordId = record->id;
-    BSONObj bsonToReturn = record->data.releaseToBson();
-    
-    // repl for split collector
-    const auto * replCoord = repl::ReplicationCoordinator::get(opCtx());
-    if (!collection()->ns().isOnInternalDb() && replCoord->getMemberState().primary()) { // so far only primary serves read
-        LOGV2(30006,
-                "PlanExecutorImpl::_getNextImpl, collect splits",
-                "nss"_attr = collection()->ns().toString(),
-                "doc"_attr = bsonToReturn.toString());
-        
-        _spcltr = std::make_unique<repl::SplitCollector>(replCoord,
-                                                         collection()->ns(),
-                                                         &bsonToReturn);
-        _spcltr->collect();
-
-        LOGV2(30017,
-                "PlanExecutorImpl::_getNextImpl, collecting done",
-                "doc"_attr = bsonToReturn.toString());
-    }
-
-    member->resetDocument(opCtx()->recoveryUnit()->getSnapshotId(), bsonToReturn);
+    member->resetDocument(opCtx()->recoveryUnit()->getSnapshotId(), record->data.releaseToBson());
     _workingSet->transitionToRecordIdAndObj(id);
     return returnIfMatches(member, id, out);
 }

@@ -743,9 +743,9 @@ env.Library(
         'replication_coordinator_noop.cpp',
     ],
     LIBDEPS=[
+        'erasure_coder',
         'optime',
         'replication_process',
-        'erasure_coder',
         '$BUILD_DIR/mongo/db/namespace_string',
         '$BUILD_DIR/mongo/db/service_context',
         '$BUILD_DIR/mongo/util/net/network',
@@ -1456,11 +1456,11 @@ env.Library(
         'erasure_coder.cpp',
     ],
     SYSLIBDEPS=[
-        'isal'
+        'isal',
     ],
     LIBDEPS_PRIVATE=[
         '$BUILD_DIR/mongo/base',
-        '$BUILD_DIR/mongo/db/catalog/index_catalog'
+        '$BUILD_DIR/mongo/db/catalog/index_catalog',
     ]
 )
 
@@ -1470,22 +1470,6 @@ env.CppUnitTest(
         'erasure_coder_test.cpp',
     ],
     LIBDEPS_PRIVATE=[
-        'erasure_coder'
-    ]
-)
-
-env.Library(
-    target='ec_split_collector',
-    source=[
-        'ec_split_collector.cpp',
-    ],
-    LIBDEPS_PRIVATE=[
-        '$BUILD_DIR/mongo/base',
-        '$BUILD_DIR/mongo/bson/util/bson_extract',
-        '$BUILD_DIR/mongo/bson/mutable/mutable_bson',
-        '$BUILD_DIR/mongo/client/clientdriver_network',
-        '$BUILD_DIR/mongo/db/namespace_string',
-        'replica_set_messages',
         'erasure_coder',
-    ],
+    ]
 )

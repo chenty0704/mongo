@@ -506,7 +506,7 @@ Status CollectionImpl::insertDocuments(OperationContext* opCtx,
 
     // For the primary, filter out splits for secondaries.
     const auto* const replCoord = repl::ReplicationCoordinator::get(opCtx);
-    if (replCoord->getMemberState().primary() && !_ns.isOnInternalDb()) {
+    if (!_ns.isOnInternalDb() && replCoord->getMemberState().primary()) {
         std::vector<InsertStatement> filtered;
         filtered.reserve(std::distance(begin, end));
         std::transform(
